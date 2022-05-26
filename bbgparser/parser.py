@@ -17,33 +17,40 @@ from .constants import (EQ, EOL, COMMENT, START_OF_FILE,
 def _headers():
     key = pyparsing.Word(pyparsing.alphanums + '_')
     val = pyparsing.Word(pyparsing.printables)
-    header_line = pyparsing\
-        .Group(key('key') + EQ + val('value') + EOL)
+    header_line = pyparsing.Group(key('key') + EQ + val('value') + EOL)
 
-    return pyparsing\
-        .OneOrMore(
+    return pyparsing.OneOrMore(
             header_line
             ^ COMMENT
-        ).setParseAction(lambda items: {item[0]: item[1] for item in items})
+    ).setParseAction(lambda items: {item[0]: item[1] for item in items})
 
 
 def _fields_block():
     field = pyparsing.Word(pyparsing.alphanums + '_')
     fields = pyparsing.OneOrMore(field, stopOn=END_OF_FIELDS)
 
-    return pyparsing\
-        .nestedExpr(
+    return pyparsing.nestedExpr(
             START_OF_FIELDS,
             END_OF_FIELDS,
             content=fields
-        ).setParseAction(list)
+    ).setParseAction(list)
 
 
 def _parse_data_block(row):
-    return [i.split('|') for i in row]
+    data = []
 
+    for i in row:
+        if '|' in i:
+            if i.rstrip().endswith('|'):
+                data.append([x.strip() for x in i.split('|')[:-1]])
+            else:
+                data.append([x.strip() for x in i.split('|')])
+        else:
+            data.append([i])
 
-def _data_block():
+    return data
+
+def _timed_data_block():
     date_time_started = pyparsing.Group(
         TIMESTARTED
         + EQ
@@ -56,23 +63,28 @@ def _data_block():
         + pyparsing.Regex(r".*")
     )
 
+    return pyparsing.nestedExpr(
+        date_time_started,
+        date_time_finished,
+        content=_data_block()
+    ).setParseAction(lambda x: [z for y in x for z in y])
+
+
+def _data_block():
     data_line = pyparsing.Regex('.*')
     data_lines = pyparsing.OneOrMore(data_line, stopOn=END_OF_DATA)
 
     return pyparsing.nestedExpr(
-        date_time_started,
-        date_time_finished,
-        content=pyparsing.nestedExpr(
-            START_OF_DATA,
-            END_OF_DATA,
-            content=data_lines.setParseAction(_parse_data_block)
-        )
-    ).setParseAction(lambda x: [z for y in x for z in y])
+        START_OF_DATA,
+        END_OF_DATA,
+        content=data_lines.setParseAction(_parse_data_block)
+    ).setParseAction(lambda x: [[z for y in x for z in y]])
 
 
 def _parse_content(content: str) -> pyparsing.ParseResults:
     headers = _headers()
     fields_block = _fields_block()
+    timed_data_block = _timed_data_block()
     data_block = _data_block()
 
     file = pyparsing.nestedExpr(
@@ -82,7 +94,8 @@ def _parse_content(content: str) -> pyparsing.ParseResults:
             COMMENT
             ^ headers.setResultsName('headers')
             ^ fields_block.setResultsName('fields')
-            ^ data_block.setResultsName('data')
+            ^ (timed_data_block.setResultsName('data') |
+               data_block.setResultsName('data'))
         )
     )
 

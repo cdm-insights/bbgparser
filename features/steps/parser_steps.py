@@ -28,7 +28,11 @@ def step_then_we_get_all_the_fields(context):
 
 @then('we get the records')
 def step_then_we_get_all_the_records(context):
-    expected_records = [tuple(row) for row in context.table]
-    parsed_records = [tuple(row) for row in context.results['data']]
+    expected_records = [
+        tuple([x for x in row if x.strip() != '<NOCOL>']) \
+            for row in context.table]
+    parsed_records = [
+        tuple(row) \
+            for row in context.results['data']]
 
     assert set(parsed_records) == set(expected_records)

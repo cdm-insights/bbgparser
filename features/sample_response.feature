@@ -1,7 +1,7 @@
-Feature: Parse BBG file
+Feature: Parse BBG response file
 
 Scenario: Extracting headers
-  Given the file fixtures/wellformed_file.bbg
+  Given the file fixtures/sample_response.bbg
    When parsing the file
    Then we get the headers
      | key | value |
@@ -45,15 +45,15 @@ Scenario: Extracting headers
      |VOL_SURFACE|YES|
 
 Scenario: Extracting fields
-  Given the file fixtures/wellformed_file.bbg
+  Given the file fixtures/sample_response.bbg
     When parsing the file
     Then we get the fields
       | field   |
       | PX_LAST |
 
 Scenario: Extracting records
-  Given the file fixtures/wellformed_file.bbg
+  Given the file fixtures/sample_response.bbg
     When parsing the file
     Then we get the records
-      | ISIN         | error_code | records | var1       | empty_column |
-      | EU0009658442 | 0          | 1       | 271.740000 |              |
+      | ISIN         | error_code | records | var1       |
+      | EU0009658442 | 0          | 1       | 271.740000 |
